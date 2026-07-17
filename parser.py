@@ -65,3 +65,34 @@ def parse_job_cards(html: str) -> list[dict]:
     return cards
 
 
+def parse_job_detail(html: str) -> dict:
+    if not html or not html.strip():
+        return {}
+
+    soup = BeautifulSoup(html, "lxml")
+    body_elem = soup.find("div", class_=re.compile(r"show-more-less-html__markup|description__text"))
+    if not body_elem:
+        body_elem = soup.find("section", class_=re.compile(r"show-more-less-html"))
+
+    criteria = {}
+    for crit_item in soup.find_all("li", class_=re.compile(r"description__job-criteria-item")):
+        header = crit_item.find("h3")
+        val = crit_item.find("span")
+        if header and val:
+            k = clean_text(header.text).lower().replace(" ", "_")
+            criteria[k] = clean_text(val.text)
+
+    description = ""
+    if body_elem:
+        # strip script and style tags
+        for s in body_elem(["script", "style"]):
+            s.decompose()
+        description = body_elem.get_text(separator="\n", strip=True)
+
+    return {
+        "description": description,
+        "seniority_level": criteria.get("seniority_level", ""),
+        "employment_type": criteria.get("employment_type", ""),
+        "job_function": criteria.get("job_function", ""),
+        "industries": criteria.get("industries", ""),
+    }
