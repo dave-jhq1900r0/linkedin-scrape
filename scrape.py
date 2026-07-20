@@ -132,3 +132,32 @@ def crawl(keywords: str, location: str, max_jobs: int, delay_range: tuple[float,
             json_fh.close()
 
 
+def main():
+    parser = argparse.ArgumentParser(description="Scrape LinkedIn job postings without login")
+    parser.add_argument("-k", "--keywords", required=True, help="Job search terms")
+    parser.add_argument("-l", "--location", default="United States", help="Target location string")
+    parser.add_argument("-n", "--count", type=int, default=50, help="Target job count")
+    parser.add_argument("-o", "--output", default="jobs.sqlite", help="Output destination file")
+    parser.add_argument("--format", choices=["sqlite", "jsonl"], default="sqlite", help="Output format")
+    parser.add_argument("--min-delay", type=float, default=1.2, help="Minimum pause between detail requests")
+    parser.add_argument("--max-delay", type=float, default=2.8, help="Maximum pause between detail requests")
+
+    args = parser.parse_args()
+
+    dest_path = Path(args.output)
+    try:
+        crawl(
+            keywords=args.keywords,
+            location=args.location,
+            max_jobs=args.count,
+            delay_range=(args.min_delay, args.max_delay),
+            output_format=args.format,
+            out_file=dest_path
+        )
+    except KeyboardInterrupt:
+        print("\ncanceled by user, exiting.")
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
