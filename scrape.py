@@ -32,3 +32,35 @@ def init_db(db_path: Path):
     return conn
 
 
+def save_sqlite(conn, record: dict):
+    sql = """
+        INSERT INTO jobs (job_id, title, company, location, posted_date, url, seniority_level, employment_type, job_function, industries, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(job_id) DO UPDATE SET
+            title=excluded.title,
+            company=excluded.company,
+            location=excluded.location,
+            posted_date=excluded.posted_date,
+            url=excluded.url,
+            seniority_level=excluded.seniority_level,
+            employment_type=excluded.employment_type,
+            job_function=excluded.job_function,
+            industries=excluded.industries,
+            description=excluded.description
+    """
+    with conn:
+        conn.execute(sql, (
+            record["job_id"],
+            record.get("title", ""),
+            record.get("company", ""),
+            record.get("location", ""),
+            record.get("posted_date", ""),
+            record.get("url", ""),
+            record.get("seniority_level", ""),
+            record.get("employment_type", ""),
+            record.get("job_function", ""),
+            record.get("industries", ""),
+            record.get("description", ""),
+        ))
+
+
