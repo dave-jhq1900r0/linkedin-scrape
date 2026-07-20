@@ -64,3 +64,71 @@ def save_sqlite(conn, record: dict):
         ))
 
 
+def crawl(keywords: str, location: str, max_jobs: int, delay_range: tuple[float, float], output_format: str, out_file: Path):
+    client = GuestClient()
+    seen_ids = set()
+    total_saved = 0
+    start = 0
+    batch_size = 25
+
+    db_conn = None
+    json_fh = None
+
+    if output_format == "sqlite":
+        db_conn = init_db(out_file)
+    else:
+        out_file.parent.mkdir(parents=True, exist_ok=True)
+        json_fh = open(out_file, "a", encoding="utf-8")
+
+    try:
+        while total_saved < max_jobs:
+            print(f"fetching batch at offset {start}...")
+            html = client.get_search_page(keywords=keywords, location=location, start=start)
+            if not html:
+                print("empty page or search limit hit, stopping.")
+                break
+
+            cards = parse_job_cards(html)
+            if not cards:
+                print("no more cards returned.")
+                break
+
+            new_cards = [c for c in cards if c["job_id"] not in seen_ids]
+            if not new_cards:
+                # pagination returned duplicates or ended
+                break
+
+            for card in new_cards:
+                seen_ids.add(card["job_id"])
+                time.sleep(random.uniform(delay_range[0], delay_range[1]))
+
+                detail_html = client.get_job_detail(card["job_id"])
+                detail_info = parse_job_detail(detail_html)
+
+                full_record = dict(card)
+                full_record.update(detail_info)
+
+                if db_conn:
+                    save_sqlite(db_conn, full_record)
+                elif json_fh:
+                    json_fh.write(json.dumps(full_record, ensure_ascii=False) + "\n")
+                    json_fh.flush()
+
+                total_saved += 1
+                print(f"[{total_saved}/{max_jobs}] saved: {card['title']} @ {card['company']}")
+
+                if total_saved >= max_jobs:
+                    break
+
+            start += batch_size
+            # FIXME: linkedin starts serving weird 400s past offset 900 on guest searches
+            time.sleep(random.uniform(1.5, 3.0))
+
+    finally:
+        client.close()
+        if db_conn:
+            db_conn.close()
+        if json_fh:
+            json_fh.close()
+
+
