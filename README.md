@@ -65,3 +65,5 @@ CREATE TABLE IF NOT EXISTS jobs (
     scraped_at TEXT
 );
 ```
+
+<!-- generated: 2026-09-09 -->
