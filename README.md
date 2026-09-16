@@ -66,4 +66,4 @@ CREATE TABLE IF NOT EXISTS jobs (
 );
 ```
 
-<!-- generated: 2026-09-15 -->
+<!-- generated: 2026-09-16 -->
